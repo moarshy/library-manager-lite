@@ -14,9 +14,23 @@
     },
     "recommender": {
       "provider": "anthropic",
-      "model": "claude-3-sonnet-20240307",
+      "model": "claude-3-sonnet-20240229",
       "api_key_env": "ANTHROPIC_API_KEY",
       "additional_params": {}
+    },
+    "ollama-embed": {
+      "provider": "ollama",
+      "model": "nomic-embed-text",
+      "api_key_env": "OLLAMA_API_KEY",
+      "additional_params": {},
+      "api_base": "http://localhost:11434"
+    },
+    "ollama-chat": {
+      "provider": "ollama",
+      "model": "gemma3:4b",
+      "api_key_env": "OLLAMA_API_KEY",
+      "additional_params": {},
+      "api_base": "http://localhost:11434"
     }
   },
   "defaults": {

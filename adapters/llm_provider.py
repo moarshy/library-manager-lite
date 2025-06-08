@@ -28,6 +28,7 @@ class LitellmProvider:
         Role: Sets up LLM provider for subsequent metadata extraction.
         """
         import litellm
+
         self.litellm = litellm
         self.model = model
         self.api_key = api_key
@@ -102,11 +103,11 @@ class LitellmProvider:
             return None
         return guessed
         
-    def embed_text(self, text: str) -> Optional[list[float]]:
+    def embed_text(self, text: Union[str, list[str]]) -> Optional[Union[list[float], list[list[float]]]]:
         """
         Purpose: Generate embeddings for text using configured embedding model.
-        Inputs: text (str) - text to embed
-        Outputs: List of floats representing the embedding vector or None on failure
+        Inputs: text (str or list[str]) - text(s) to embed
+        Outputs: List of floats (for str input) or list of lists of floats (for list[str] input) or None on failure
         Role: Text embedding for semantic search and similarity.
         """
         try:
@@ -116,7 +117,10 @@ class LitellmProvider:
                 api_key=self.api_key,
                 **self.kwargs
             )
-            return response['data'][0]['embedding']
+            if isinstance(text, str):
+                return response['data'][0]['embedding']
+            else:
+                return [d['embedding'] for d in response['data']]
         except Exception as e:
             print(f"Embedding error: {e}")
             return None
@@ -174,22 +178,28 @@ def get_llm_provider(workflow: str = None, **kwargs) -> 'LitellmProvider':
         workflow_config = config["workflows"][workflow]
     else:
         workflow_config = config.get("defaults", {
-            "provider": "anthropic",
-            "model": "claude-3-haiku-20240307",
+            "model": "anthropic/claude-3-haiku-20240307",
             "api_key_env": "ANTHROPIC_API_KEY"
         })
-    
     # Extract configuration
     model = kwargs.pop("model", workflow_config.get("model"))
     api_key_env = workflow_config.get("api_key_env")
     additional_params = workflow_config.get("additional_params", {})
-    
+    api_base = workflow_config.get("api_base")
+    provider = workflow_config.get("provider")
+    model = f"{provider}/{model}"
+
     # Get API key from environment
-    api_key = os.getenv(api_key_env)
-    if not api_key:
-        raise RuntimeError(f"API key not found. Please set {api_key_env} in your environment or .env file.")
+    if provider == "ollama":
+        api_key = os.getenv(api_key_env, "ollama")
+    else:
+        api_key = os.getenv(api_key_env)
+        if not api_key:
+            raise RuntimeError(f"API key not found. Please set {api_key_env} in your environment or .env file.")
     
     # Merge additional parameters with kwargs
     merged_kwargs = {**additional_params, **kwargs}
+    if api_base:
+        merged_kwargs['api_base'] = api_base
     
     return LitellmProvider(model, api_key, **merged_kwargs)
